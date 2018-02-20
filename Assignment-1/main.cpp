@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
 
+#define PLANE_WIDTH 100
+#define PLANE_HEIGHT 100
+
 using namespace std;
 
 struct color_t {
@@ -29,7 +32,7 @@ Sphere::Sphere(color_t color, position_t position, int radius) {
   this->radius = radius;
 }
 
-// (not-so-smart) constructors. Better than putting constructors inside structs imo.
+// (not-so-smart) constructors. Better than putting constructors inside structs IMO.
 color_t color(int R, int G, int B) {
   color_t color;
   color.R = R;
@@ -46,8 +49,21 @@ position_t position(int x, int y, int z) {
   return position;
 }
 
-enum ColorComponent { R, G, B };
-enum PositionComponent { X, Y, Z };
+color_t** init_plane() {
+  color_t** plane = new color_t*[PLANE_WIDTH];
+  for(int i = 0; i < PLANE_WIDTH; ++i)
+    plane[i] = new color_t[PLANE_HEIGHT];
+  return plane;
+}
+
+template <typename action>
+void forall_plane(color_t** plane, action act) {
+  for(int x = -50; x <= 50; x++) {
+    for(int y = -50; y <= 50; y++) {
+      plane[x][y] = act(x, y);
+    }
+  }
+}
 
 void sphere_annot(string component, int sphere_number) {
   cout << component << " for Sphere No. " << sphere_number << ":";
@@ -59,6 +75,18 @@ void pos_annot(string axis, int sphere_number) {
 
 void color_annot(string color_component, int sphere_number) {
   sphere_annot("Color (" + color_component + ")", sphere_number);
+}
+
+color_t red_color() {
+  color_t color;
+  color.R = 255;
+  color.G = 0;
+  color.B = 0;
+  return color;
+}
+
+color_t shoot_ray(int x, int y, vector<Sphere*> spheres) {
+  return red_color();
 }
 
 int main() 
@@ -89,5 +117,6 @@ int main()
       cin >> radius;
       spheres->push_back(new Sphere(color(R, G, B), position(x, y, z), radius));
     };
+    forall_plane(init_plane(), [spheres](int x, int y){ return shoot_ray(x, y, *spheres); });
     return 0;
 }
