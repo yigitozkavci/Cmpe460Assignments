@@ -8,11 +8,12 @@
 #define PLANE_END_X 50
 #define PLANE_START_Y -50
 #define PLANE_END_Y 50
-#define PLANE_WIDTH PLANE_END_X - PLANE_START_X
-#define PLANE_HEIGHT PLANE_END_Y - PLANE_START_Y
-#define PLANE_Z 100 // Assuming this is constant since it eases up things
+#define PLANE_WIDTH (PLANE_END_X - PLANE_START_X)
+#define PLANE_HEIGHT (PLANE_END_Y - PLANE_START_Y)
+#define PLANE_Z 100.0 // Assuming this is constant since it eases up things
 #define DEBUG 0
 #define LIGHT_POS { 500, 500, 500 }
+#define RESOLUTION_COEFF 10
 
 /**
  * When we round the quadratic equation results to integers, there occurs
@@ -25,21 +26,6 @@
 #define CLOSENESS_TOLERANCE 10
 
 using namespace std;
-
-/**
- * Helper for receiving white color.
- */
-color_t white_color = color_t { 255, 255, 255 };
-
-/**
- * Helper for receiving light position.
- */
-position_t light_pos = position_t LIGHT_POS;
-
-/**
- * Origin point.
- */
-position_t origin = position_t { 0, 0, 0 };
 
 /**
  * Representation of a RGB color.
@@ -67,9 +53,9 @@ struct color_t {
  * with double axes.
  */
 struct position_t {
-  int x;
-  int y;
-  int z;
+  double x;
+  double y;
+  double z;
   position_t operator+(position_t other) {
     return position_t { this->x + other.x, this->y + other.y, this->z + other.z };
   }
@@ -91,6 +77,21 @@ struct position_t {
 };
 
 /**
+ * Helper for receiving white color.
+ */
+color_t white_color = color_t { 255, 255, 255 };
+
+/**
+ * Helper for receiving light position.
+ */
+position_t light_pos = position_t LIGHT_POS;
+
+/**
+ * Origin point.
+ */
+position_t origin = position_t { 0.0, 0.0, 0.0 };
+
+/**
  * Representation of a direction vector. This is double because we often want
  * rays to be absolute to use in quadratic equations. We approximate this to be
  * a position if needed.
@@ -100,7 +101,7 @@ struct direction_t {
   double y;
   double z;
   position_t approximate() {
-    return position_t { (int) round(this->x), (int) round(this->y), (int) round(this->z) };
+    return position_t { this->x, this->y, this->z };
   }
   double length() {
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z); 
@@ -145,10 +146,10 @@ struct Sphere {
  * everywhere.
  */
 color_t** init_plane() {
-  color_t** plane = new color_t*[PLANE_WIDTH];
-  for(int i = 0; i < PLANE_WIDTH; ++i) {
-    plane[i] = new color_t[PLANE_HEIGHT];
-    for(int j = 0; j < PLANE_HEIGHT; ++j) {
+  color_t** plane = new color_t*[PLANE_WIDTH * RESOLUTION_COEFF];
+  for(int i = 0; i < PLANE_WIDTH * RESOLUTION_COEFF; ++i) {
+    plane[i] = new color_t[PLANE_HEIGHT * RESOLUTION_COEFF];
+    for(int j = 0; j < PLANE_HEIGHT * RESOLUTION_COEFF; ++j) {
       plane[i][j] = color_t { 0, 0, 0 };
     }
   }
@@ -162,9 +163,12 @@ color_t** init_plane() {
  */
 template <typename action>
 void forall_plane(color_t** plane, action act) {
-  for(int x = PLANE_START_X; x < PLANE_END_X; x++) {
-    for(int y = PLANE_START_Y; y < PLANE_END_Y; y++) {
-      plane[x-PLANE_START_X][y-PLANE_START_Y] = act(x, y); // Shifting indexes of plane matrix accordingly
+  for(int x = 0; x < PLANE_WIDTH * RESOLUTION_COEFF; x++) {
+    for(int y = 0; y < PLANE_HEIGHT * RESOLUTION_COEFF; y++) {
+      plane[x][y] = act(
+        ((double) x) / RESOLUTION_COEFF + PLANE_START_X,
+        ((double) y) / RESOLUTION_COEFF + PLANE_START_Y
+      ); // Shifting indexes of plane matrix accordingly
     }
   }
 }
@@ -295,10 +299,10 @@ color_t shoot_ray(vector_t ray_vec, vector<Sphere> spheres) {
  * Writes the given plane `plane` as a bmp image into a file named `filename`.
  */
 void write_image(color_t **plane, string filename) {
-  bitmap_image image(100, 100);
-  forall_plane(plane, [plane, &image](int x, int y) {
-    color_t color = plane[x-PLANE_START_X][y-PLANE_START_Y];
-    image.set_pixel(x-PLANE_START_X, y-PLANE_START_Y, color.R, color.G, color.B);
+  bitmap_image image(100 * RESOLUTION_COEFF, 100 * RESOLUTION_COEFF);
+  forall_plane(plane, [plane, &image](double x, double y) {
+    color_t color = plane[(int) ((x - PLANE_START_X) * RESOLUTION_COEFF)][(int) ((y - PLANE_START_Y) * RESOLUTION_COEFF) ];
+    image.set_pixel((x-PLANE_START_X) * RESOLUTION_COEFF, (y-PLANE_START_Y) * RESOLUTION_COEFF, color.R, color.G, color.B);
     return color;
   });
   image.save_image(filename);
@@ -313,8 +317,8 @@ vector<Sphere>* read_spheres() {
   cout << "Use the test data only? (1 or 0 for yes or no)" << endl;
   cin >> use_test_data;
   if(use_test_data) {
-    spheres->push_back(Sphere { color_t { 255, 0, 0 }, position_t { 50, 50, 300 }, 20 });
-    spheres->push_back(Sphere { color_t { 0, 255, 0 }, position_t { 100, 100, 600 }, 60 });
+    spheres->push_back(Sphere { color_t { 255, 0, 0 }, position_t { 50.0, 50.0, 300.0 }, 20 });
+    spheres->push_back(Sphere { color_t { 0, 255, 0 }, position_t { 100.0, 100.0, 600.0 }, 60 });
     return spheres;
   }
   cout << "Number of spheres:";
@@ -329,7 +333,7 @@ vector<Sphere>* read_spheres() {
     color_annot("B", i);
     cin >> B;
 
-    int x, y, z;
+    double x, y, z;
     pos_annot("x", i);
     cin >> x;
     pos_annot("y", i);
@@ -351,8 +355,8 @@ int main()
 
   /* Preparing the plane */
   color_t **plane = init_plane();
-  forall_plane(plane, [spheres](int x, int y){
-    return shoot_ray(vector_t { origin, pos_to_dir(position_t { x, y, PLANE_Z }) }, *spheres);
+  forall_plane(plane, [spheres](double x, double y){
+    return shoot_ray(vector_t { origin, direction_t { x, y, PLANE_Z } }, *spheres);
   });
 
   /* Drawing the image */
