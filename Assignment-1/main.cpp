@@ -14,6 +14,7 @@
 #define DEBUG 0
 #define LIGHT_POS { 500, 500, 500 }
 #define RESOLUTION_COEFF 10
+#define AMBIENT_COEFF 0.1
 
 /**
  * When we round the quadratic equation results to integers, there occurs
@@ -38,9 +39,9 @@ struct color_t {
     return this->R == other.R && this->G == other.G && this->B == other.B;
   }
   void desaturate() {
-    this->R = this->R * 0.1;
-    this->G = this->G * 0.1;
-    this->B = this->B * 0.1;
+    this->R = this->R * AMBIENT_COEFF;
+    this->G = this->G * AMBIENT_COEFF;
+    this->B = this->B * AMBIENT_COEFF;
   }
   void print() const {
     cout << "(" << this->R << ", " << this->G << ", " << this->B << ")" << endl;
