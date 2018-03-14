@@ -16,7 +16,6 @@
 #define LIGHT_POS { 500, 500, 500 }
 #define RESOLUTION_COEFF 10
 #define AMBIENT_LIGHT 0.3
-#define ILLUMINATION 0.8
 
 /**
  * When we round the quadratic equation results to integers, there occurs
@@ -42,7 +41,9 @@ struct color_t {
     return this->R == other.R && this->G == other.G && this->B == other.B && this->lustre == other.lustre;
   }
   void illuminate(double amount) {
-    this->lustre = min(1.0, this->lustre + amount);
+    cout << this->lustre << endl;
+    cout << amount << endl;
+    this->lustre = min(1.0, this->lustre + max(0.0, amount));
   }
   void print() const {
     cout << "(" << this->R << ", " << this->G << ", " << this->B << ", " << this->lustre << ")" << endl;
@@ -116,6 +117,9 @@ struct direction_t {
   }
   direction_t operator*(double coeff) {
     return direction_t { coeff * this->x, coeff * this->y, coeff * this->z };
+  }
+  double angle_cos_with(direction_t other) {
+    return this->dot(other) / (this->length() * other.length());
   }
 };
 
@@ -204,6 +208,9 @@ struct sphere_intersection_t {
   sphere_t sphere;
   color_t color;
   position_t point;
+  direction_t normal_vector() {
+    return pos_to_dir(this->point - this->sphere.center);
+  }
 };
 
 /**
@@ -272,7 +279,8 @@ void shadow_point(sphere_intersection_t* focus_intersection, vector<sphere_t> sp
     }
   }
   if(intersections->empty()) {
-    focus_intersection->color.illuminate(ILLUMINATION);
+    double illumination = focus_intersection->normal_vector().angle_cos_with(pos_to_dir(light_pos - focus_intersection->point));
+    focus_intersection->color.illuminate(illumination);
   }
   if(DEBUG) cout << "-----------------------------------------------" << endl;
 }
