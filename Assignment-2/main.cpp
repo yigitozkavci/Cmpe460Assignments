@@ -41,8 +41,6 @@ struct color_t {
     return this->R == other.R && this->G == other.G && this->B == other.B && this->lustre == other.lustre;
   }
   void illuminate(double amount) {
-    cout << this->lustre << endl;
-    cout << amount << endl;
     this->lustre = min(1.0, this->lustre + max(0.0, amount));
   }
   void print() const {
@@ -83,11 +81,6 @@ struct position_t {
  * Helper for receiving white color.
  */
 color_t white_color = color_t { 255, 255, 255, 1 };
-
-/**
- * Helper for receiving light position.
- */
-position_t light_pos = position_t LIGHT_POS;
 
 /**
  * Origin point.
@@ -180,24 +173,24 @@ void forall_plane(color_t** plane, action act) {
 }
 
 /**
- * Write an annotation for a component of a sphere.
+ * Write an annotation for a property of an object.
  */
-void sphere_annot(string component, int sphere_number) {
-  cout << component << " for Sphere No. " << sphere_number << ":" << endl;
+void annot(string property, int no, string object) {
+  cout << property << " for " << object << " No. " << no << ":" << endl;
 }
 
 /**
- * Write an annotation for position of a sphere.
+ * Write an annotation for position of an object.
  */
-void pos_annot(string axis, int sphere_number) {
-  sphere_annot("Position (" + axis + ")", sphere_number);
+void pos_annot(string axis, int no, string object) {
+  annot("Position (" + axis + ")", no, object);
 }
 
 /**
- * Write an annotation for color of a sphere.
+ * Write an annotation for color of an object.
  */
-void color_annot(string color_component, int sphere_number) {
-  sphere_annot("Color (" + color_component + ")", sphere_number);
+void color_annot(string color_component, int sphere_number, string object) {
+  annot("Color (" + color_component + ")", sphere_number, object);
 }
 
 /**
@@ -263,7 +256,7 @@ vector<sphere_intersection_t> *ray_sphere_intersection(vector_t ray_vec, vector<
 /**
  * Given an intersection and a list of spheres, shadows that point if necessary.
  */
-void shadow_point(sphere_intersection_t* focus_intersection, vector<sphere_t> spheres) {
+void illuminate_point(sphere_intersection_t* focus_intersection, vector<sphere_t> spheres, position_t light_pos) {
   if(DEBUG) {
     cout << "-- Shadowing --" << endl;
     cout << "Focus Point: ";
@@ -288,7 +281,7 @@ void shadow_point(sphere_intersection_t* focus_intersection, vector<sphere_t> sp
 /**
  * Shoots the given ray vector considering the spheres list.
  */
-color_t shoot_ray(vector_t ray_vec, vector<sphere_t> spheres) {
+color_t shoot_ray(vector_t ray_vec, vector<sphere_t> spheres, vector<position_t> light_positions) {
   vector<sphere_intersection_t> *intersections = ray_sphere_intersection(ray_vec, spheres);
   if(intersections->empty()) {
     return white_color;
@@ -301,7 +294,9 @@ color_t shoot_ray(vector_t ray_vec, vector<sphere_t> spheres) {
     }
     if(intersections->empty()) return white_color;
     sphere_intersection_t closest_intersection = intersections->back();
-    shadow_point(&closest_intersection, spheres);
+    for(const position_t& light_pos : light_positions) {
+      illuminate_point(&closest_intersection, spheres, light_pos);
+    }
     return closest_intersection.color;
   }
 }
@@ -335,52 +330,86 @@ void write_image(color_t **plane, string filename) {
 /**
  * Reads all the information necessary for representing spheres
  */
-vector<sphere_t>* read_spheres() {
-  vector<sphere_t>* spheres = new vector<sphere_t>();
-  bool use_test_data;
-  cout << "Use the test data only? (1 or 0 for yes or no)" << endl;
-  cin >> use_test_data;
-  if(use_test_data) {
-    spheres->push_back(sphere_t { color_t { 255, 0, 0, AMBIENT_LIGHT }, position_t { 50.0, 50.0, 300.0 }, 20 });
-    spheres->push_back(sphere_t { color_t { 0, 255, 0, AMBIENT_LIGHT }, position_t { 100.0, 100.0, 600.0 }, 60 });
-    return spheres;
-  }
+void read_spheres(vector<sphere_t> *spheres) {
+  string object = "Sphere";
   cout << "Number of spheres:";
   int N;
   cin >> N;
   for(int i = 1; i <= N; i++) {
     int R, G, B;
-    color_annot("R", i);
+    color_annot("R", i, object);
     cin >> R;
-    color_annot("G", i);
+    color_annot("G", i, object);
     cin >> G;
-    color_annot("B", i);
+    color_annot("B", i, object);
     cin >> B;
 
     double x, y, z;
-    pos_annot("x", i);
+    pos_annot("x", i, object);
     cin >> x;
-    pos_annot("y", i);
+    pos_annot("y", i, object);
     cin >> y;
-    pos_annot("z", i);
+    pos_annot("z", i, object);
     cin >> z;
 
     int radius;
-    sphere_annot("Radius", i);
+    annot("Radius", i, object);
     cin >> radius;
     spheres->push_back(sphere_t { color_t { R, G, B, AMBIENT_LIGHT }, position_t { x, y, z }, radius });
   };
-  return spheres;
+}
+
+void read_light_positions(vector<position_t> *light_positions) {
+  string object = "Light Source";
+  cout << "Number of light sources:";
+  int N;
+  cin >> N;
+  for(int i = 1; i <= N; i++) {
+    double x, y, z;
+    pos_annot("x", i, object);
+    cin >> x;
+    pos_annot("y", i, object);
+    cin >> y;
+    pos_annot("z", i, object);
+    cin >> z;
+    light_positions->push_back(position_t { x, y, z });
+  }
+}
+
+struct input_data_t {
+  vector<sphere_t> spheres;
+  vector<position_t> light_positions;
+};
+
+input_data_t read_input_data() {
+  vector<sphere_t>* spheres = new vector<sphere_t>();
+  vector<position_t>* light_positions = new vector<position_t>();
+
+  bool use_test_data;
+  cout << "Use the test data only? (1 or 0 for yes or no)" << endl;
+  cin >> use_test_data;
+
+  if(use_test_data) {
+    spheres->push_back(sphere_t { color_t { 255, 0, 0, AMBIENT_LIGHT }, position_t { 50.0, 50.0, 300.0 }, 20 });
+    spheres->push_back(sphere_t { color_t { 0, 255, 0, AMBIENT_LIGHT }, position_t { 100.0, 100.0, 600.0 }, 60 });
+    light_positions->push_back(position_t { 500, 500, 500 });
+    light_positions->push_back(position_t { -500, -500, 500 });
+  } else {
+    read_spheres(spheres);
+    read_light_positions(light_positions);
+  }
+  return input_data_t { *spheres, *light_positions };
 }
 
 int main() 
 {
-  vector<sphere_t>* spheres = read_spheres();
+  input_data_t input_data = read_input_data();
 
   /* Preparing the plane */
   color_t **plane = init_plane();
-  forall_plane(plane, [spheres](double x, double y){
-    return shoot_ray(vector_t { origin, direction_t { x, y, PLANE_Z } }, *spheres);
+
+  forall_plane(plane, [input_data](double x, double y){
+    return shoot_ray(vector_t { origin, direction_t { x, y, PLANE_Z } }, input_data.spheres, input_data.light_positions);
   });
 
   /* Drawing the image */
