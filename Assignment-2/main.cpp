@@ -302,13 +302,13 @@ color_t shoot_ray(vector_t ray_vec, vector<sphere_t> spheres, vector<position_t>
 }
 
 color_t apply_illumination(color_t color) {
-  color_t result_color;
-  result_color.R = color.R * color.lustre;
-  result_color.G = color.G * color.lustre;
-  result_color.B = color.B * color.lustre;
-  result_color.lustre = color.lustre;
-  return result_color;
+  return color_t { (int) (color.R * color.lustre + 0.5)
+                 , (int) (color.G * color.lustre + 0.5)
+                 , (int) (color.B * color.lustre + 0.5)
+                 , color.lustre
+                 };
 }
+
 /**
  * Writes the given plane `plane` as a bmp image into a file named `filename`.
  */
