@@ -148,57 +148,6 @@ struct vector_t {
   direction_t direction;
 };
 
-class Shape {
-  virtual direction_t calculateNormalVector(position_t) = 0;
-  color_t color;
-  Shape(color_t);
-};
-
-class Sphere : Shape {
-  public:
-    direction_t calculateNormalVector(position_t point) {
-      return pos_to_dir(point - this->center);
-    }
-  private:
-    position_t center;
-    int radius;
-};
-
-class Plane : Shape {
-  public:
-    direction_t calculateNormalVector(position_t point) {
-      return this->normal_vector; // Normal vector for planes are constant
-    }
-  private:
-    direction_t normal_vector;
-};
-
-template<class T>
-class Intersection {
-  public:
-    Intersection(T object, color_t color, position_t point);
-    position_t getPoint() {
-      return this->point;
-    }
-    direction_t getNormalVector() {
-      return this->normal_vector;
-    }
-    color_t getColor() {
-      return this->color;
-    }
-  private:
-    direction_t normal_vector;
-    position_t point;
-    color_t color;
-    T object;
-};
-
-template<typename T>
-Intersection<T>::Intersection(T object, color_t color, position_t point) {
-  this->object = object;
-  this->color = color;
-  this->point = point;
-}
 /**
  * Intersection is modeled as a color and a point. Color is the color of the object
  * which point is on.
@@ -218,7 +167,3 @@ enum quadratic_result {
   ONE_ROOT,
   TWO_ROOTS
 };
-
-bool double_are_same(double v1, double v2) {
-  return fabs(v1 - v2) < EPSILON;
-}

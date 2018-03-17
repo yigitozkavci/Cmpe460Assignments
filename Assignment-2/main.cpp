@@ -65,16 +65,13 @@ quadratic_result quadratic(double A, double B, double C, double *result1, double
   double discr = B * B - 4 * A * C;
   if(discr < 0) {
     // No intersection
-    if(DEBUG) cout << "No intersection" << endl;
     return NO_ROOT;
   } else if (discr == 0) {
     *result1 = -B / (2 * A);
-    if(DEBUG) cout << "One intersection: " << *result1 << endl;
     return ONE_ROOT;
   } else {
     *result1 = (-B - sqrt(discr)) / (2 * A);
     *result2 = (-B + sqrt(discr)) / (2 * A);
-    if(DEBUG) cout << "Two intersections: " << *result1 << " and " << *result2 << endl;
     return TWO_ROOTS;
   }
 }
@@ -301,7 +298,6 @@ input_data_t read_input_data() {
     spheres->push_back(sphere_t { color_t { 255, 0, 0, AMBIENT_LIGHT }, position_t { 50.0, 50.0, 300.0 }, 20 });
     spheres->push_back(sphere_t { color_t { 0, 255, 0, AMBIENT_LIGHT }, position_t { 100.0, 100.0, 600.0 }, 60 });
     light_positions->push_back(position_t { 500, 500, 500 });
-    /* light_positions->push_back(position_t { -500, -500, 500 }); */
   } else {
     read_spheres(spheres);
     read_light_positions(light_positions);
