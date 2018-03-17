@@ -222,62 +222,80 @@ void write_image(color_t **plane, string filename) {
   image.save_image(filename);
 }
 
+double read_double(string description) {
+  cout << description << ": ";
+  double value;
+  cin >> value;
+  return value;
+}
+
+int read_int(string description) {
+  cout << description << ": ";
+  int value;
+  cin >> value;
+  return value;
+}
+
+bool read_bool(string description) {
+  cout << description << ": ";
+  bool value;
+  cin >> value;
+  return value;
+}
+
+position_t read_position(string description) {
+  cout << description << endl;
+  double x = read_double("x");
+  double y = read_double("y");
+  double z = read_double("z");
+  return position_t { x, y, z };
+}
+
+color_t read_color(string description) {
+  cout << description << endl;
+  int R, G, B;
+  R = read_int("R");
+  G = read_int("G");
+  B = read_int("B");
+  return color_t { R, G, B, AMBIENT_LIGHT };
+}
+
 /**
  * Reads all the information necessary for representing spheres
  */
 void read_spheres(vector<sphere_t> *spheres) {
   string object = "Sphere";
-  cout << "Number of spheres:";
-  int N;
-  cin >> N;
+  int N = read_int("Number of spheres");
   for(int i = 1; i <= N; i++) {
-    int R, G, B;
-    color_annot("R", i, object);
-    cin >> R;
-    color_annot("G", i, object);
-    cin >> G;
-    color_annot("B", i, object);
-    cin >> B;
-
-    double x, y, z;
-    pos_annot("x", i, object);
-    cin >> x;
-    pos_annot("y", i, object);
-    cin >> y;
-    pos_annot("z", i, object);
-    cin >> z;
-
-    int radius;
-    annot("Radius", i, object);
-    cin >> radius;
-    spheres->push_back(sphere_t { color_t { R, G, B, AMBIENT_LIGHT }, position_t { x, y, z }, radius });
+    color_t color = read_color("Sphere Color");
+    position_t center = read_position("Sphere Center");
+    int radius = read_int("Sphere Radius");
+    spheres->push_back(sphere_t { color, center, radius });
   };
 }
 
 void read_light_positions(vector<position_t> *light_positions) {
-  string object = "Light Source";
-  cout << "Number of light sources:";
-  int N;
-  cin >> N;
+  int N = read_int("Number of light sources");
   for(int i = 1; i <= N; i++) {
-    double x, y, z;
-    pos_annot("x", i, object);
-    cin >> x;
-    pos_annot("y", i, object);
-    cin >> y;
-    pos_annot("z", i, object);
-    cin >> z;
-    light_positions->push_back(position_t { x, y, z });
+    light_positions->push_back(read_position("Light Source Position"));
   }
+}
+
+direction_t read_direction(string description) {
+  return pos_to_dir(read_position(description));
+}
+
+void read_ground_plane(plane_t *ground_plane) {
+  string object = "Ground Plane";
+  *ground_plane = plane_t { read_position("Ground Plane Position: (0, 0, 700) for instance"), read_direction("Ground Plane Direction: (0, 0, -1) for instance"), PLANE_COLOR };
 }
 
 input_data_t read_input_data() {
   vector<sphere_t>* spheres = new vector<sphere_t>();
   vector<position_t>* light_positions = new vector<position_t>();
+  plane_t ground_plane = plane_t { position_t { 0, 0, 700 }, direction_t { 0, 0, -1 }, PLANE_COLOR };
 
-  bool use_test_data;
-  cout << "Use the test data only? (1 or 0 for yes or no)" << endl;
-  cin >> use_test_data;
+  bool use_test_data = read_bool("Use the test data only? (1 or 0 for yes or no)");
 
   if(use_test_data) {
     spheres->push_back(sphere_t { color_t { 255, 0, 0, AMBIENT_LIGHT }, position_t { 50.0, 50.0, 300.0 }, 20 });
@@ -287,15 +305,16 @@ input_data_t read_input_data() {
   } else {
     read_spheres(spheres);
     read_light_positions(light_positions);
+    read_ground_plane(&ground_plane);
   }
-  plane_t ground_plane = plane_t { position_t { 0, 0, 700 }, direction_t { 0, 0, -1 }, PLANE_COLOR };
-  return input_data_t { *spheres, *light_positions, ground_plane };
+  return input_data_t { *spheres, *light_positions, plane_t { position_t { 0, 0, 700 }, direction_t { 0, 0, -1 }, PLANE_COLOR } };
 }
 
 int main() 
 {
   input_data_t input_data = read_input_data();
 
+  cout << "Starting the rendering, this process can take a while..." << endl;
   /* Preparing the plane */
   color_t **plane = init_plane();
 
