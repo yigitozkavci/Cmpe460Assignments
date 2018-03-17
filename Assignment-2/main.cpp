@@ -79,51 +79,79 @@ quadratic_result quadratic(double A, double B, double C, double *result1, double
   }
 }
 
+vector<intersection_t> *ray_sphere_intersections(vector_t ray_vec, sphere_t sphere) {
+  vector<intersection_t> *intersections = new vector<intersection_t>();
+  double A = ray_vec.direction.dot(ray_vec.direction);
+  double B = 2 * (ray_vec.direction.dot(ray_vec.origin - sphere.center));
+  double C = pow((ray_vec.origin - sphere.center).length(), 2) - pow(sphere.radius, 2);
+  double t1, t2;
+  quadratic_result result = quadratic(A, B, C, &t1, &t2);
+
+  if(result == NO_ROOT) {
+    // No intersection
+  } else if (result == ONE_ROOT) {
+    // One intersection
+    position_t point = ray_vec.origin + (ray_vec.direction * t1).approximate();
+    intersections->push_back(intersection_t { sphere.color, point, sphere_normal_vector(sphere, point) });
+  } else if (result == TWO_ROOTS) {
+    // Two intersections
+    position_t point1 = ray_vec.origin + (ray_vec.direction * t1).approximate();
+    position_t point2 = ray_vec.origin + (ray_vec.direction * t2).approximate();
+
+    if(t1 >= 0) intersections->push_back(intersection_t { sphere.color, point1, sphere_normal_vector(sphere, point1) });
+    if(t2 >= 0) intersections->push_back(intersection_t { sphere.color, point2, sphere_normal_vector(sphere, point2) });
+  }
+
+  return intersections;
+}
+
+vector<intersection_t> *ray_plane_intersections(vector_t ray_vec, plane_t plane) {
+  vector<intersection_t> *intersections = new vector<intersection_t>();
+  position_t p0 = plane.point;
+  position_t l0 = ray_vec.origin;
+  direction_t n = plane.normal_vector;
+  direction_t l = ray_vec.direction;
+  if(n.dot(l) == 0) cout << "wow" << endl;
+  double t = pos_to_dir(p0 - l0).dot(n) / l.dot(n);
+  position_t intersection_point = ray_vec.origin + (ray_vec.direction * t).approximate();
+  if(t >= 0)
+    intersections->push_back(intersection_t { plane.color, intersection_point, plane.normal_vector });
+  return intersections;
+}
+
 /**
  * This is the heart of the program. This function takes a ray vector and a list of
  * spheres, and returns a SORTED list of intersections, which if popped from back, returns
  * intersections that are closest first.
  */
-vector<sphere_intersection_t> *ray_sphere_intersection(vector_t ray_vec, vector<sphere_t> spheres, plane_t ground_plane) {
-  vector<sphere_intersection_t> *intersections = new vector<sphere_intersection_t>();
-  for(vector<sphere_t>::iterator it = spheres.begin(); it != spheres.end(); it++) {
-    if(DEBUG) cout << "-- Ray-Sphere Intersection --" << endl;
-    sphere_t sphere = *it;
-    double A = ray_vec.direction.dot(ray_vec.direction);
-    double B = 2 * (ray_vec.direction.dot(ray_vec.origin - sphere.center));
-    double C = pow((ray_vec.origin - sphere.center).length(), 2) - pow(sphere.radius, 2);
-    double t1, t2;
-    quadratic_result result = quadratic(A, B, C, &t1, &t2);
-    if(result == NO_ROOT) {
-      // No intersection
-      if(DEBUG) cout << "No intersection" << endl;
-    } else if (result == ONE_ROOT) {
-      position_t point = ray_vec.origin + (ray_vec.direction * t1).approximate();
-      intersections->push_back(sphere_intersection_t { sphere, sphere.color, point });
-    } else if (result == TWO_ROOTS) {
-      position_t point1 = ray_vec.origin + (ray_vec.direction * t1).approximate();
-      position_t point2 = ray_vec.origin + (ray_vec.direction * t2).approximate();
-      if(DEBUG) {
-        cout << "Point 1:";
-        point1.print();
-        cout << "Point 2:";
-        point2.print();
-      }
-      if(t1 >= 0) intersections->push_back(sphere_intersection_t { sphere, sphere.color, point1 });
-      if(t2 >= 0) intersections->push_back(sphere_intersection_t { sphere, sphere.color, point2 });
+vector<intersection_t> *ray_intersections(vector_t ray_vec, vector<sphere_t> spheres, plane_t ground_plane) {
+
+  vector<intersection_t> *intersections = new vector<intersection_t>();
+
+  /* Ray-Sphere Intersections */
+  for(const sphere_t & sphere : spheres) {
+    for(const intersection_t & intersection : *ray_sphere_intersections(ray_vec, sphere)) {
+      intersections->push_back(intersection);
     }
-    if(DEBUG) cout << "-----------------------------------------------" << endl;
   }
-  sort(intersections->begin(), intersections->end(), [&ray_vec](sphere_intersection_t l, sphere_intersection_t r) {
+  for(const intersection_t & intersection : *ray_plane_intersections(ray_vec, ground_plane)) {
+    intersections->push_back(intersection);
+  }
+
+  sort(intersections->begin(), intersections->end(), [&ray_vec](intersection_t l, intersection_t r) {
     return (l.point - ray_vec.origin).length() > (r.point - ray_vec.origin).length(); 
   });
   return intersections;
 }
 
+bool between(position_t point, position_t start, position_t end) {
+  return (point - start).length() <= (end - start).length() &&
+    (end - point).length() <= (end - start).length();
+}
 /**
  * Given an intersection and a list of spheres, shadows that point if necessary.
  */
-void illuminate_point(sphere_intersection_t* focus_intersection, vector<sphere_t> spheres, plane_t ground_plane, position_t light_pos) {
+void illuminate_point(intersection_t* focus_intersection, vector<sphere_t> spheres, plane_t ground_plane, position_t light_pos) {
   if(DEBUG) {
     cout << "-- Shadowing --" << endl;
     cout << "Focus Point: ";
@@ -132,14 +160,14 @@ void illuminate_point(sphere_intersection_t* focus_intersection, vector<sphere_t
     (light_pos - focus_intersection->point).print();
   }
   vector_t shadow_vec = vector_t { focus_intersection->point, pos_to_dir(light_pos - focus_intersection->point) };
-  vector<sphere_intersection_t> *intersections = ray_sphere_intersection(shadow_vec, spheres, ground_plane);
+  vector<intersection_t> *intersections = ray_intersections(shadow_vec, spheres, ground_plane);
   if(!intersections->empty()) {
-    while(intersections->back().point.too_close(focus_intersection->point) && !intersections->empty()) {
+    while((between(light_pos, focus_intersection->point, intersections->back().point) || intersections->back().point.too_close(focus_intersection->point)) && !intersections->empty()) {
       intersections->pop_back();
     }
   }
   if(intersections->empty()) {
-    double illumination = focus_intersection->normal_vector().angle_cos_with(pos_to_dir(light_pos - focus_intersection->point));
+    double illumination = focus_intersection->normal_vector.angle_cos_with(pos_to_dir(light_pos - focus_intersection->point));
     focus_intersection->color.illuminate(illumination);
   }
   if(DEBUG) cout << "-----------------------------------------------" << endl;
@@ -149,18 +177,18 @@ void illuminate_point(sphere_intersection_t* focus_intersection, vector<sphere_t
  * Shoots the given ray vector considering the spheres list.
  */
 color_t shoot_ray(vector_t ray_vec, vector<sphere_t> spheres, vector<position_t> light_positions, plane_t ground_plane) {
-  vector<sphere_intersection_t> *intersections = ray_sphere_intersection(ray_vec, spheres, ground_plane);
+  vector<intersection_t> *intersections = ray_intersections(ray_vec, spheres, ground_plane);
   if(intersections->empty()) {
     return white_color;
   } else {
-    sphere_intersection_t elem = intersections->back();
+    intersection_t elem = intersections->back();
 
     while(elem.point == origin && !intersections->empty()) {
       intersections->pop_back();
-      sphere_intersection_t elem = intersections->back();
+      intersection_t elem = intersections->back();
     }
     if(intersections->empty()) return white_color;
-    sphere_intersection_t closest_intersection = intersections->back();
+    intersection_t closest_intersection = intersections->back();
     for(const position_t& light_pos : light_positions) {
       illuminate_point(&closest_intersection, spheres, ground_plane, light_pos);
     }
@@ -255,12 +283,12 @@ input_data_t read_input_data() {
     spheres->push_back(sphere_t { color_t { 255, 0, 0, AMBIENT_LIGHT }, position_t { 50.0, 50.0, 300.0 }, 20 });
     spheres->push_back(sphere_t { color_t { 0, 255, 0, AMBIENT_LIGHT }, position_t { 100.0, 100.0, 600.0 }, 60 });
     light_positions->push_back(position_t { 500, 500, 500 });
-    light_positions->push_back(position_t { -500, -500, 500 });
+    /* light_positions->push_back(position_t { -500, -500, 500 }); */
   } else {
     read_spheres(spheres);
     read_light_positions(light_positions);
   }
-  plane_t ground_plane = plane_t { position_t { 0, 0, 800 }, direction_t { 0, 0, -800 } };
+  plane_t ground_plane = plane_t { position_t { 0, 0, 700 }, direction_t { 0, 0, -1 }, PLANE_COLOR };
   return input_data_t { *spheres, *light_positions, ground_plane };
 }
 
