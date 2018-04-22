@@ -46,10 +46,10 @@
   "report.toc" 1521279292 308 762c4342ab508287c236f4dc64f099cf ""
   (generated)
   "report.aux"
+  "report.dvi"
   "report.log"
   "report.toc"
-  "report.dvi"
-["pdflatex"] 1521281199 "report.tex" "report.pdf" "report" 1521281200
+["pdflatex"] 1521281568 "report.tex" "report.pdf" "report" 1521281569
   "/usr/local/texlive/2017basic/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm" 1480098701 1328 c834bbb027764024c09d3d2bf908b5f0 ""
   "/usr/local/texlive/2017basic/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm" 1480098701 1324 c910af8c371558dc20f2d7822f66fe64 ""
   "/usr/local/texlive/2017basic/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm" 1480098701 1524 4414a8315f39513458b80dfc63bff03a ""
@@ -116,11 +116,11 @@
   "images/red-bg-ambient-03.png" 1521280570 351459 8f185951359bb19ecd634884673c70c5 ""
   "images/red-bg-ambient-05.png" 1521280619 359721 39cf0af30de9795aaa4a20d4c0ef98ab ""
   "images/white-bg-ambient-03.png" 1521280517 211626 0222cec54c4cc523b8c7df8e07bb19b2 ""
-  "report.aux" 1521281200 1598 4d7b0aad579b20885726ba443d7808a2 ""
-  "report.tex" 1521281194 3976 30c49a79f1c1c438965a36789bc77639 ""
-  "report.toc" 1521281200 417 a5bbb144da35ef12d93125b073904c15 ""
+  "report.aux" 1521281569 1598 4d7b0aad579b20885726ba443d7808a2 ""
+  "report.tex" 1521281564 4023 0003ad6d2840f7e42763e23344724157 ""
+  "report.toc" 1521281569 417 a5bbb144da35ef12d93125b073904c15 ""
   (generated)
-  "report.toc"
-  "report.log"
-  "report.aux"
   "report.pdf"
+  "report.aux"
+  "report.log"
+  "report.toc"
