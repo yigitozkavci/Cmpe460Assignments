@@ -1,0 +1,18 @@
+ply
+format ascii 1.0
+element vertex 4                      { there are 4 vertices in the list }
+property float x                      { start of position }
+property float y
+property float z
+property float r                    { start of vertex color }
+property float g
+property float b
+element triangle 2                  { there are 2 triangles in the list }
+property list uchar int vertex_indices  { Each triangle will have 3 vertices. uchar is type of the count variable. int is the type of indices.}
+end_header
+-0.5 -0.5 -0.5 1.0 0.0 0.0    { start of vertex list, three positions, three colors}
+-0.5  0.5 -0.5 0.0 1.0 0.0
+ 0.5  0.5 -0.5 0.0 0.0 1.0
+ 0.5 -0.5 -0.5 1.0 0.0 1.0
+3 0 1 2                           { start of triangle list. Only a rectangle is drawn with this file, consisting of two triangles. The first number is the number of vertices used. The three next numbers are the vertex indices}
+3 0 2 3
